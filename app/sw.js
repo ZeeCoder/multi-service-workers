@@ -1,5 +1,6 @@
 // @todo Message support (request / response style too)
 // @todo Alert the user of newly (successfully) installed app version
+// @todo only cache get requests
 
 // Current cache version. Increase it to force clear client cache.
 // Note: Adding new assets does not require clearing old caches

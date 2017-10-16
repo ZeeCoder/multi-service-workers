@@ -3,13 +3,17 @@
 
 // Current cache version. Increase it to force clear client cache.
 // Note: Adding new assets does not require clearing old caches
-const version = "v11";
+// UNIX timestamp of last "breaking" change, that require a new cache.
+// (Like updated assets with the same URL.)
+const version = "1508113818530";
 // Trusted app assets
 const appAssets = ["./", "./index.html", "./app.js"];
+// Dynamic assets, which could be generated based on a backend asset upload form.
+const dynamicAssets = [];
 // Potentially CORS assets
 const corsAssets = [
-  "https://keyassets.timeincuk.net/inspirewp/live/wp-content/uploads/sites/12/2016/01/16578.jpg",
-  "http://www.posterparty.com/images/tv-game-of-thrones-tyrion-lannister-S3-portrait-poster-PYRpas0430.jpg"
+  "http://www.posterparty.com/images/tv-game-of-thrones-tyrion-lannister-S3-portrait-poster-PYRpas0430.jpg",
+  "http://img11.deviantart.net/626e/i/2015/012/5/9/game_of_thrones__portrait_of_olenna_tyrell_by_aarongarcia-d8dnrnj.png"
 ];
 
 // Note: If the promise given to waituntil fails, then installation will be
@@ -20,6 +24,20 @@ this.addEventListener("install", function(event) {
   event.waitUntil(cacheAssets());
 });
 
+/**
+ * Activate is called once the old service worker instance is released, and the
+ * new one was installed.
+ * In practice, this means that after an update:
+ * - The first refresh will install the new service worker (install event), but
+ * in the meantime the old SW will still be in charge
+ * - After another refresh, the new installed sw takes over, but activate is not
+ * called yet (instead it's in `waiting to activate` status)
+ * - only after the tab is closed, or the user navigates away, will the old
+ * service worker be released.
+ * - Then, on revisit "activate" is called, which can finally clean up after the
+ * old SW. (Note that the new sw can work just fine without the previous one
+ * being cleaned up.)
+ */
 this.addEventListener("activate", function(event) {
   console.log("[Activate] Deleting previous caches");
 
@@ -69,6 +87,11 @@ const cacheAssets = () =>
     .then(cache =>
       Promise.all([
         ...appAssets.map(assetUrl =>
+          fetchUniversal(assetUrl).then(response =>
+            cache.put(assetUrl, response)
+          )
+        ),
+        ...dynamicAssets.map(assetUrl =>
           fetchUniversal(assetUrl).then(response =>
             cache.put(assetUrl, response)
           )
